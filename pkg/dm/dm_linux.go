@@ -151,7 +151,7 @@ var ioctlSyscall = func(fd, req, arg uintptr) (uintptr, uintptr, unix.Errno) {
 }
 
 func dmReq(nr uintptr) uintptr {
-	return iowr(DMIOCTLType, nr, uintptr(unsafe.Sizeof(dmIoctl{})))
+	return iowr(DMIOCTLType, nr, unsafe.Sizeof(dmIoctl{}))
 }
 
 func (c *Control) rawIoctl(nr uintptr, buf unsafe.Pointer) error {
@@ -177,7 +177,7 @@ func makeBaseIoctl(name, uuid string, totalDataSize int) dmIoctl {
 func (c *Control) CreateDevice(name string) (uint64, error) {
 	buf := make([]byte, unsafe.Sizeof(dmIoctl{}))
 	io := (*dmIoctl)(unsafe.Pointer(&buf[0]))
-	*io = makeBaseIoctl(name, "", int(len(buf)))
+	*io = makeBaseIoctl(name, "", len(buf))
 	if err := c.rawIoctl(DMDevCreateCMD, unsafe.Pointer(io)); err != nil {
 		return 0, fmt.Errorf("dm create '%s': %w", name, err)
 	}
@@ -187,7 +187,7 @@ func (c *Control) CreateDevice(name string) (uint64, error) {
 func (c *Control) RemoveDevice(name string) error {
 	buf := make([]byte, unsafe.Sizeof(dmIoctl{}))
 	io := (*dmIoctl)(unsafe.Pointer(&buf[0]))
-	*io = makeBaseIoctl(name, "", int(len(buf)))
+	*io = makeBaseIoctl(name, "", len(buf))
 	if err := c.rawIoctl(DMDevRemoveCMD, unsafe.Pointer(io)); err != nil {
 		return fmt.Errorf("dm remove '%s': %w", name, err)
 	}
@@ -197,7 +197,7 @@ func (c *Control) RemoveDevice(name string) error {
 func (c *Control) SuspendDevice(name string, suspend bool) error {
 	buf := make([]byte, unsafe.Sizeof(dmIoctl{}))
 	io := (*dmIoctl)(unsafe.Pointer(&buf[0]))
-	*io = makeBaseIoctl(name, "", int(len(buf)))
+	*io = makeBaseIoctl(name, "", len(buf))
 	if suspend {
 		io.Flags |= DMSuspendFlag
 	}
@@ -253,7 +253,7 @@ func (c *Control) LoadTable(name string, targets []Target) error {
 func (c *Control) ClearTable(name string) error {
 	buf := make([]byte, unsafe.Sizeof(dmIoctl{}))
 	io := (*dmIoctl)(unsafe.Pointer(&buf[0]))
-	*io = makeBaseIoctl(name, "", int(len(buf)))
+	*io = makeBaseIoctl(name, "", len(buf))
 	if err := c.rawIoctl(DMTableClearCMD, unsafe.Pointer(io)); err != nil {
 		if errors.Is(err, unix.EINVAL) || errors.Is(err, unix.ENXIO) {
 			return nil
@@ -266,7 +266,7 @@ func (c *Control) ClearTable(name string) error {
 func (c *Control) DeviceStatus(name string) (DeviceStatus, error) {
 	buf := make([]byte, unsafe.Sizeof(dmIoctl{}))
 	io := (*dmIoctl)(unsafe.Pointer(&buf[0]))
-	*io = makeBaseIoctl(name, "", int(len(buf)))
+	*io = makeBaseIoctl(name, "", len(buf))
 	if err := c.rawIoctl(DMDevStatusCMD, unsafe.Pointer(io)); err != nil {
 		return DeviceStatus{}, fmt.Errorf("dm dev status '%s': %w", name, err)
 	}
@@ -279,7 +279,7 @@ func (c *Control) DeviceStatus(name string) (DeviceStatus, error) {
 		ulen++
 	}
 	maj := unix.Major(io.Dev)
-	min := unix.Minor(io.Dev)
+	minor := unix.Minor(io.Dev)
 	return DeviceStatus{
 		OpenCount:       io.OpenCount,
 		TargetCount:     io.TargetCount,
@@ -287,7 +287,7 @@ func (c *Control) DeviceStatus(name string) (DeviceStatus, error) {
 		Flags:           io.Flags,
 		Dev:             io.Dev,
 		Major:           maj,
-		Minor:           min,
+		Minor:           minor,
 		Name:            string(io.Name[:nlen]),
 		UUID:            string(io.UUID[:ulen]),
 		ActivePresent:   (io.Flags & DMActivePresentFlag) != 0,

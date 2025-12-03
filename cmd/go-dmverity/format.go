@@ -30,9 +30,9 @@ import (
 	verity "github.com/containerd/go-dmverity/pkg/verity"
 )
 
-func runFormat(p *verity.VerityParams, dataPath, hashPath string) error {
+func runFormat(p *verity.Params, dataPath, hashPath string) error {
 	if !p.NoSuperblock && p.HashAreaOffset == 0 {
-		p.HashAreaOffset = utils.AlignUp(uint64(verity.VeritySuperblockSize), uint64(p.HashBlockSize))
+		p.HashAreaOffset = utils.AlignUp(uint64(verity.SuperblockSize), uint64(p.HashBlockSize))
 	}
 
 	if _, err := os.Stat(hashPath); errors.Is(err, os.ErrNotExist) {
@@ -45,7 +45,7 @@ func runFormat(p *verity.VerityParams, dataPath, hashPath string) error {
 		return fmt.Errorf("stat hash path %s: %w", hashPath, err)
 	}
 
-	rootHash, err := verity.VerityCreate(p, dataPath, hashPath)
+	rootHash, err := verity.Create(p, dataPath, hashPath)
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func runFormat(p *verity.VerityParams, dataPath, hashPath string) error {
 
 	hashDeviceSize := totalHashBlocks * uint64(p.HashBlockSize)
 	if !p.NoSuperblock {
-		hashDeviceSize += utils.AlignUp(uint64(verity.VeritySuperblockSize), uint64(p.HashBlockSize))
+		hashDeviceSize += utils.AlignUp(uint64(verity.SuperblockSize), uint64(p.HashBlockSize))
 	}
 
 	var uuidStr string
@@ -96,7 +96,7 @@ func runFormat(p *verity.VerityParams, dataPath, hashPath string) error {
 	return nil
 }
 
-func parseFormatArgs(args []string) (*verity.VerityParams, string, string, error) {
+func parseFormatArgs(args []string) (*verity.Params, string, string, error) {
 	fs := flag.NewFlagSet("format", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 
@@ -117,7 +117,7 @@ func parseFormatArgs(args []string) (*verity.VerityParams, string, string, error
 	dataPath := rest[0]
 	hashPath := rest[1]
 
-	p := verity.DefaultVerityParams()
+	p := verity.DefaultParams()
 
 	applyFlags(&p, flags)
 

@@ -84,13 +84,13 @@ func TestUint64MultOverflow(t *testing.T) {
 func TestWriteSuperblockErrors(t *testing.T) {
 	tests := []struct {
 		name        string
-		params      *VerityParams
+		params      *Params
 		uuid        string
 		expectError bool
 	}{
 		{"nil params", nil, "550e8400-e29b-41d4-a716-446655440000", true},
-		{"no superblock", &VerityParams{NoSuperblock: true}, "550e8400-e29b-41d4-a716-446655440000", true},
-		{"invalid uuid", &VerityParams{DataBlocks: 100}, "invalid-uuid", true},
+		{"no superblock", &Params{NoSuperblock: true}, "550e8400-e29b-41d4-a716-446655440000", true},
+		{"invalid uuid", &Params{DataBlocks: 100}, "invalid-uuid", true},
 	}
 
 	for _, tt := range tests {
@@ -131,16 +131,16 @@ func TestWriteSuperblockErrors(t *testing.T) {
 	}
 }
 
-func TestReadVeritySuperblockErrors(t *testing.T) {
+func TestReadSuperblockErrors(t *testing.T) {
 	tests := []struct {
 		name        string
-		params      *VerityParams
+		params      *Params
 		offset      uint64
 		expectError bool
 	}{
 		{"nil params", nil, 0, true},
-		{"no superblock", &VerityParams{NoSuperblock: true}, 0, true},
-		{"unaligned offset", &VerityParams{}, 100, true},
+		{"no superblock", &Params{NoSuperblock: true}, 0, true},
+		{"unaligned offset", &Params{}, 100, true},
 	}
 
 	for _, tt := range tests {
@@ -169,7 +169,7 @@ func TestReadVeritySuperblockErrors(t *testing.T) {
 			}
 
 			if (testErr != nil) != tt.expectError {
-				t.Errorf("ReadVeritySuperblock() error = %v, expectError %v", testErr, tt.expectError)
+				t.Errorf("ReadSuperblock() error = %v, expectError %v", testErr, tt.expectError)
 			}
 		})
 	}
@@ -185,7 +185,7 @@ func TestSuperblockRoundTrip(t *testing.T) {
 	uuidStr := uuid.New().String()
 
 	salt := []byte("superblock-test")
-	params := &VerityParams{
+	params := &Params{
 		HashName:       "sha256",
 		DataBlockSize:  4096,
 		HashBlockSize:  4096,
@@ -221,7 +221,7 @@ func TestSuperblockRoundTrip(t *testing.T) {
 	}
 	defer hashFile2.Close()
 
-	readParams := &VerityParams{}
+	readParams := &Params{}
 	sbRead, err := ReadSuperblock(hashFile2, 0)
 	if err != nil {
 		t.Fatalf("ReadSuperblock failed: %v", err)
@@ -256,7 +256,7 @@ func TestSuperblockRoundTrip(t *testing.T) {
 	}
 }
 
-func TestVerityCreateWithVeritysetup(t *testing.T) {
+func TestCreateWithVeritysetup(t *testing.T) {
 	if _, err := exec.LookPath("veritysetup"); err != nil {
 		t.Skip("veritysetup not found, skipping integration test")
 	}
@@ -295,7 +295,7 @@ func TestVerityCreateWithVeritysetup(t *testing.T) {
 				saltArgs = []string{"--salt", hex.EncodeToString(salt)}
 			}
 
-			params := &VerityParams{
+			params := &Params{
 				HashName:       tt.hashAlgo,
 				DataBlockSize:  4096,
 				HashBlockSize:  4096,
@@ -311,9 +311,9 @@ func TestVerityCreateWithVeritysetup(t *testing.T) {
 			var err error
 
 			if tt.noSuperblock {
-				rootHashGo, err = VerityCreate(params, dataPath, hashPathGo)
+				rootHashGo, err = Create(params, dataPath, hashPathGo)
 				if err != nil {
-					t.Fatalf("VerityCreate failed: %v", err)
+					t.Fatalf("Create failed: %v", err)
 				}
 			} else {
 				uuidStr := uuid.New().String()
@@ -330,9 +330,9 @@ func TestVerityCreateWithVeritysetup(t *testing.T) {
 				}
 				hashFile.Close()
 
-				rootHashGo, err = VerityCreate(params, dataPath, hashPathGo)
+				rootHashGo, err = Create(params, dataPath, hashPathGo)
 				if err != nil {
-					t.Fatalf("VerityCreate failed: %v", err)
+					t.Fatalf("Create failed: %v", err)
 				}
 			}
 
@@ -359,7 +359,7 @@ func TestVerityCreateWithVeritysetup(t *testing.T) {
 	}
 }
 
-func TestVerityVerifyWithVeritysetup(t *testing.T) {
+func TestVerifyWithVeritysetup(t *testing.T) {
 	if _, err := exec.LookPath("veritysetup"); err != nil {
 		t.Skip("veritysetup not found, skipping integration test")
 	}
@@ -390,7 +390,7 @@ func TestVerityVerifyWithVeritysetup(t *testing.T) {
 				salt = []byte("verify-test-salt")
 			}
 
-			params := &VerityParams{
+			params := &Params{
 				HashName:       tt.hashAlgo,
 				DataBlockSize:  4096,
 				HashBlockSize:  4096,
@@ -406,7 +406,7 @@ func TestVerityVerifyWithVeritysetup(t *testing.T) {
 			var err error
 
 			if tt.noSuperblock {
-				rootHash, err = VerityCreate(params, dataPath, hashPath)
+				rootHash, err = Create(params, dataPath, hashPath)
 			} else {
 				uuidStr := uuid.New().String()
 				params.HashAreaOffset = 4096
@@ -422,15 +422,15 @@ func TestVerityVerifyWithVeritysetup(t *testing.T) {
 				}
 				hashFile.Close()
 
-				rootHash, err = VerityCreate(params, dataPath, hashPath)
+				rootHash, err = Create(params, dataPath, hashPath)
 			}
 
 			if err != nil {
 				t.Fatalf("Create failed: %v", err)
 			}
 
-			if err := VerityVerify(params, dataPath, hashPath, rootHash); err != nil {
-				t.Errorf("VerityVerify failed: %v", err)
+			if err := Verify(params, dataPath, hashPath, rootHash); err != nil {
+				t.Errorf("Verify failed: %v", err)
 			}
 		})
 	}
@@ -473,7 +473,7 @@ func TestCrossVerificationWithVeritysetup(t *testing.T) {
 				saltArgs = []string{"--salt", hex.EncodeToString(salt)}
 			}
 
-			params := &VerityParams{
+			params := &Params{
 				HashName:       tt.hashAlgo,
 				DataBlockSize:  4096,
 				HashBlockSize:  4096,
@@ -485,7 +485,7 @@ func TestCrossVerificationWithVeritysetup(t *testing.T) {
 				NoSuperblock:   true,
 			}
 
-			rootHashGo, _ := VerityCreate(params, dataPath, hashPathGo)
+			rootHashGo, _ := Create(params, dataPath, hashPathGo)
 
 			args := []string{"format", dataPath, hashPathC, "--hash", tt.hashAlgo,
 				"--data-block-size", "4096", "--hash-block-size", "4096"}
@@ -509,12 +509,12 @@ func TestCrossVerificationWithVeritysetup(t *testing.T) {
 					t.Fatalf("Failed to write stripped hash file: %v", err)
 				}
 
-				if err := VerityVerify(params, dataPath, hashPathStripped, rootHashCBytes); err != nil {
+				if err := Verify(params, dataPath, hashPathStripped, rootHashCBytes); err != nil {
 					t.Errorf("Go failed to verify veritysetup hash tree: %v", err)
 				}
 			}
 
-			if err := VerityVerify(params, dataPath, hashPathGo, rootHashGo); err != nil {
+			if err := Verify(params, dataPath, hashPathGo, rootHashGo); err != nil {
 				t.Errorf("Go failed to verify its own hash tree: %v", err)
 			}
 		})
@@ -546,7 +546,7 @@ func TestDataCorruptionDetection(t *testing.T) {
 				salt = []byte("corruption-test-salt")
 			}
 
-			params := &VerityParams{
+			params := &Params{
 				HashName:       tt.hashAlgo,
 				DataBlockSize:  4096,
 				HashBlockSize:  4096,
@@ -558,9 +558,9 @@ func TestDataCorruptionDetection(t *testing.T) {
 				NoSuperblock:   true,
 			}
 
-			rootHash, _ := VerityCreate(params, dataPath, hashPath)
+			rootHash, _ := Create(params, dataPath, hashPath)
 
-			if err := VerityVerify(params, dataPath, hashPath, rootHash); err != nil {
+			if err := Verify(params, dataPath, hashPath, rootHash); err != nil {
 				t.Fatalf("Initial verification failed: %v", err)
 			}
 
@@ -570,7 +570,7 @@ func TestDataCorruptionDetection(t *testing.T) {
 			}
 			dataFile.Close()
 
-			if err := VerityVerify(params, dataPath, hashPath, rootHash); err == nil {
+			if err := Verify(params, dataPath, hashPath, rootHash); err == nil {
 				t.Error("Verification should fail with corrupted data")
 			}
 
@@ -579,7 +579,7 @@ func TestDataCorruptionDetection(t *testing.T) {
 			hashPath2 := createTestHashFile(t, int64(4096*uint32(tt.numBlocks)*2))
 			defer os.Remove(hashPath2)
 
-			rootHash2, _ := VerityCreate(params, dataPath2, hashPath2)
+			rootHash2, _ := Create(params, dataPath2, hashPath2)
 
 			dataFile2, _ := os.OpenFile(dataPath2, os.O_RDWR, 0)
 			if _, err := dataFile2.WriteAt([]byte{0xAA, 0xBB, 0xCC, 0xDD}, int64(tt.numBlocks/2)*4096); err != nil {
@@ -587,7 +587,7 @@ func TestDataCorruptionDetection(t *testing.T) {
 			}
 			dataFile2.Close()
 
-			if err := VerityVerify(params, dataPath2, hashPath2, rootHash2); err == nil {
+			if err := Verify(params, dataPath2, hashPath2, rootHash2); err == nil {
 				t.Error("Verification should fail with corrupted middle block")
 			}
 		})
@@ -612,7 +612,7 @@ func TestHashTreeCorruptionDetection(t *testing.T) {
 			hashPath := createTestHashFile(t, int64(4096*uint32(tt.numBlocks)*2))
 			defer os.Remove(hashPath)
 
-			params := &VerityParams{
+			params := &Params{
 				HashName:       tt.hashAlgo,
 				DataBlockSize:  4096,
 				HashBlockSize:  4096,
@@ -624,9 +624,9 @@ func TestHashTreeCorruptionDetection(t *testing.T) {
 				NoSuperblock:   true,
 			}
 
-			rootHash, _ := VerityCreate(params, dataPath, hashPath)
+			rootHash, _ := Create(params, dataPath, hashPath)
 
-			if err := VerityVerify(params, dataPath, hashPath, rootHash); err != nil {
+			if err := Verify(params, dataPath, hashPath, rootHash); err != nil {
 				t.Fatalf("Initial verification failed: %v", err)
 			}
 
@@ -636,7 +636,7 @@ func TestHashTreeCorruptionDetection(t *testing.T) {
 			}
 			hashFile.Close()
 
-			if err := VerityVerify(params, dataPath, hashPath, rootHash); err == nil {
+			if err := Verify(params, dataPath, hashPath, rootHash); err == nil {
 				t.Error("Verification should fail with corrupted hash tree")
 			}
 		})
@@ -650,7 +650,7 @@ func TestRootHashMismatch(t *testing.T) {
 	hashPath := createTestHashFile(t, int64(4096*32))
 	defer os.Remove(hashPath)
 
-	params := &VerityParams{
+	params := &Params{
 		HashName:       "sha256",
 		DataBlockSize:  4096,
 		HashBlockSize:  4096,
@@ -662,9 +662,9 @@ func TestRootHashMismatch(t *testing.T) {
 		NoSuperblock:   true,
 	}
 
-	_, err := VerityCreate(params, dataPath, hashPath)
+	_, err := Create(params, dataPath, hashPath)
 	if err != nil {
-		t.Fatalf("VerityCreate failed: %v", err)
+		t.Fatalf("Create failed: %v", err)
 	}
 
 	wrongRootHash := make([]byte, 32)
@@ -672,7 +672,7 @@ func TestRootHashMismatch(t *testing.T) {
 		wrongRootHash[i] = 0xFF
 	}
 
-	err = VerityVerify(params, dataPath, hashPath, wrongRootHash)
+	err = Verify(params, dataPath, hashPath, wrongRootHash)
 	if err == nil {
 		t.Error("Verification should fail with wrong root hash")
 	}
@@ -696,7 +696,7 @@ func TestBoundaryConditions(t *testing.T) {
 			hashPath := createTestHashFile(t, int64(4096*uint32(tt.numBlocks)*4))
 			defer os.Remove(hashPath)
 
-			params := &VerityParams{
+			params := &Params{
 				HashName:       "sha256",
 				DataBlockSize:  4096,
 				HashBlockSize:  4096,
@@ -708,12 +708,12 @@ func TestBoundaryConditions(t *testing.T) {
 				NoSuperblock:   true,
 			}
 
-			rootHash, err := VerityCreate(params, dataPath, hashPath)
+			rootHash, err := Create(params, dataPath, hashPath)
 			if err != nil {
-				t.Fatalf("VerityCreate failed: %v", err)
+				t.Fatalf("Create failed: %v", err)
 			}
 
-			if err := VerityVerify(params, dataPath, hashPath, rootHash); err != nil {
+			if err := Verify(params, dataPath, hashPath, rootHash); err != nil {
 				t.Errorf("Verification failed: %v", err)
 			}
 		})
@@ -749,7 +749,7 @@ func TestGetHashTreeSize(t *testing.T) {
 			dataPath, _ := createTestDataFile(t, tt.dataBlockSize, tt.numBlocks)
 			defer os.Remove(dataPath)
 
-			params := &VerityParams{
+			params := &Params{
 				HashName:       tt.hashAlgo,
 				DataBlockSize:  tt.dataBlockSize,
 				HashBlockSize:  tt.hashBlockSize,
@@ -769,9 +769,9 @@ func TestGetHashTreeSize(t *testing.T) {
 			hashPath := createTestHashFile(t, int64(expectedSize))
 			defer os.Remove(hashPath)
 
-			_, err = VerityCreate(params, dataPath, hashPath)
+			_, err = Create(params, dataPath, hashPath)
 			if err != nil {
-				t.Fatalf("VerityCreate failed: %v", err)
+				t.Fatalf("Create failed: %v", err)
 			}
 
 			hashData, err := os.ReadFile(hashPath)
@@ -791,19 +791,19 @@ func TestGetHashTreeSize(t *testing.T) {
 				t.Errorf("Actual hash data size %d exceeds calculated size %d", actualUsed, expectedSize)
 			}
 
-			rootHash, err := VerityCreate(params, dataPath, hashPath)
+			rootHash, err := Create(params, dataPath, hashPath)
 			if err != nil {
-				t.Fatalf("VerityCreate failed on second run: %v", err)
+				t.Fatalf("Create failed on second run: %v", err)
 			}
 
-			if err := VerityVerify(params, dataPath, hashPath, rootHash); err != nil {
-				t.Errorf("VerityVerify failed: %v", err)
+			if err := Verify(params, dataPath, hashPath, rootHash); err != nil {
+				t.Errorf("Verify failed: %v", err)
 			}
 		})
 	}
 }
 
-func TestVerityOpen(t *testing.T) {
+func TestOpen(t *testing.T) {
 	tests := []struct {
 		name         string
 		numBlocks    uint64
@@ -830,7 +830,7 @@ func TestVerityOpen(t *testing.T) {
 				salt = []byte("open-test-salt")
 			}
 
-			params := &VerityParams{
+			params := &Params{
 				HashName:       tt.hashAlgo,
 				DataBlockSize:  4096,
 				HashBlockSize:  4096,
@@ -845,9 +845,9 @@ func TestVerityOpen(t *testing.T) {
 			var rootHash []byte
 			var err error
 			if tt.noSuperblock {
-				rootHash, err = VerityCreate(params, dataPath, hashPath)
+				rootHash, err = Create(params, dataPath, hashPath)
 				if err != nil {
-					t.Fatalf("VerityCreate failed: %v", err)
+					t.Fatalf("Create failed: %v", err)
 				}
 			} else {
 				uuidStr := uuid.New().String()
@@ -855,9 +855,9 @@ func TestVerityOpen(t *testing.T) {
 				parsedUUID, _ := uuid.Parse(uuidStr)
 				copy(params.UUID[:], parsedUUID[:])
 
-				rootHash, err = VerityCreate(params, dataPath, hashPath)
+				rootHash, err = Create(params, dataPath, hashPath)
 				if err != nil {
-					t.Fatalf("VerityCreate failed: %v", err)
+					t.Fatalf("Create failed: %v", err)
 				}
 			}
 
@@ -882,12 +882,12 @@ func TestVerityOpen(t *testing.T) {
 			}()
 
 			deviceName := fmt.Sprintf("verity-test-%d", os.Getpid())
-			devPath, err := VerityOpen(params, deviceName, dataLoop, hashLoop, rootHash, "", nil)
+			devPath, err := Open(params, deviceName, dataLoop, hashLoop, rootHash, "", nil)
 			if err != nil {
-				t.Fatalf("VerityOpen failed: %v", err)
+				t.Fatalf("Open failed: %v", err)
 			}
 			defer func() {
-				if err := VerityClose(deviceName); err != nil {
+				if err := Close(deviceName); err != nil {
 					t.Logf("Failed to close device: %v", err)
 				}
 			}()
@@ -903,7 +903,7 @@ func TestVerityOpen(t *testing.T) {
 	}
 }
 
-func TestVerityClose(t *testing.T) {
+func TestClose(t *testing.T) {
 	dataPath, _ := createTestDataFile(t, 4096, 16)
 	defer os.Remove(dataPath)
 
@@ -930,7 +930,7 @@ func TestVerityClose(t *testing.T) {
 		}
 	}()
 
-	params := &VerityParams{
+	params := &Params{
 		HashName:       "sha256",
 		DataBlockSize:  4096,
 		HashBlockSize:  4096,
@@ -942,35 +942,35 @@ func TestVerityClose(t *testing.T) {
 		NoSuperblock:   true,
 	}
 
-	rootHash, err := VerityCreate(params, dataPath, hashPath)
+	rootHash, err := Create(params, dataPath, hashPath)
 	if err != nil {
-		t.Fatalf("VerityCreate failed: %v", err)
+		t.Fatalf("Create failed: %v", err)
 	}
 
 	deviceName := fmt.Sprintf("verity-close-test-%d", os.Getpid())
-	devPath, err := VerityOpen(params, deviceName, dataLoop, hashLoop, rootHash, "", nil)
+	devPath, err := Open(params, deviceName, dataLoop, hashLoop, rootHash, "", nil)
 	if err != nil {
-		t.Fatalf("VerityOpen failed: %v", err)
+		t.Fatalf("Open failed: %v", err)
 	}
 
 	if _, err := os.Stat(devPath); err != nil {
 		t.Fatalf("Device path does not exist before close: %v", err)
 	}
 
-	if err := VerityClose(deviceName); err != nil {
-		t.Errorf("VerityClose failed: %v", err)
+	if err := Close(deviceName); err != nil {
+		t.Errorf("Close failed: %v", err)
 	}
 
 	if _, err := os.Stat(devPath); err == nil {
 		t.Errorf("Device path still exists after close")
 	}
 
-	if err := VerityClose(deviceName); err == nil {
-		t.Errorf("VerityClose should fail on non-existent device")
+	if err := Close(deviceName); err == nil {
+		t.Errorf("Close should fail on non-existent device")
 	}
 }
 
-func TestVerityCheck(t *testing.T) {
+func TestCheck(t *testing.T) {
 	tests := []struct {
 		name             string
 		hashAlgo         string
@@ -1012,7 +1012,7 @@ func TestVerityCheck(t *testing.T) {
 				}
 			}()
 
-			params := &VerityParams{
+			params := &Params{
 				HashName:       tt.hashAlgo,
 				DataBlockSize:  4096,
 				HashBlockSize:  4096,
@@ -1024,18 +1024,18 @@ func TestVerityCheck(t *testing.T) {
 				NoSuperblock:   true,
 			}
 
-			rootHash, err := VerityCreate(params, dataPath, hashPath)
+			rootHash, err := Create(params, dataPath, hashPath)
 			if err != nil {
-				t.Fatalf("VerityCreate failed: %v", err)
+				t.Fatalf("Create failed: %v", err)
 			}
 
 			deviceName := fmt.Sprintf("verity-check-test-%d", os.Getpid())
-			_, err = VerityOpen(params, deviceName, dataLoop, hashLoop, rootHash, "", nil)
+			_, err = Open(params, deviceName, dataLoop, hashLoop, rootHash, "", nil)
 			if err != nil {
-				t.Fatalf("VerityOpen failed: %v", err)
+				t.Fatalf("Open failed: %v", err)
 			}
 			defer func() {
-				if err := VerityClose(deviceName); err != nil {
+				if err := Close(deviceName); err != nil {
 					t.Logf("Failed to close verity device: %v", err)
 				}
 			}()
@@ -1052,9 +1052,9 @@ func TestVerityCheck(t *testing.T) {
 				}
 			}
 
-			result := VerityCheck(deviceName, checkHash)
+			result := Check(deviceName, checkHash)
 			if result != tt.expectedResult {
-				t.Errorf("VerityCheck() = %v, want %v", result, tt.expectedResult)
+				t.Errorf("Check() = %v, want %v", result, tt.expectedResult)
 			}
 		})
 	}

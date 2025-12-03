@@ -28,7 +28,7 @@ import (
 	verity "github.com/containerd/go-dmverity/pkg/verity"
 )
 
-func parseOpenArgs(args []string) (*verity.VerityParams, string, string, string, []byte, []string, string, error) {
+func parseOpenArgs(args []string) (*verity.Params, string, string, string, []byte, []string, string, error) {
 	fs := flag.NewFlagSet("open", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 
@@ -57,7 +57,7 @@ func parseOpenArgs(args []string) (*verity.VerityParams, string, string, string,
 		return nil, "", "", "", nil, nil, "", fmt.Errorf("device name too long (max %d characters)", dm.DMNameLen-1)
 	}
 
-	p := verity.DefaultVerityParams()
+	p := verity.DefaultParams()
 
 	applyFlags(&p, flags)
 
@@ -100,7 +100,7 @@ func parseOpenArgs(args []string) (*verity.VerityParams, string, string, string,
 	return &p, dataDev, name, hashDev, rootBytes, dmFlags, signatureFile, nil
 }
 
-func runOpen(p *verity.VerityParams, dataDev, name, hashDev string, rootDigest []byte, flags []string, signatureFile string) error {
+func runOpen(p *verity.Params, dataDev, name, hashDev string, rootDigest []byte, flags []string, signatureFile string) error {
 	if p == nil {
 		return fmt.Errorf("verity params is nil")
 	}
@@ -131,7 +131,7 @@ func runOpen(p *verity.VerityParams, dataDev, name, hashDev string, rootDigest [
 		}
 	}()
 
-	devPath, err := verity.VerityOpen(p, name, dataLoop, hashLoop, rootDigest, signatureFile, flags)
+	devPath, err := verity.Open(p, name, dataLoop, hashLoop, rootDigest, signatureFile, flags)
 	if err != nil {
 		return err
 	}

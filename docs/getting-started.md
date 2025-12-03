@@ -38,7 +38,7 @@ import (
 
 func main() {
     // Create hash tree
-    params := verity.DefaultVerityParams()
+    params := verity.DefaultParams()
     params.HashName = "sha256"
     
     size, err := utils.GetBlockOrFileSize("data.img")
@@ -47,14 +47,14 @@ func main() {
     }
     params.DataBlocks = uint64(size / int64(params.DataBlockSize))
     
-    rootHash, err := verity.VerityCreate(&params, "data.img", "hash.img")
+    rootHash, err := verity.Create(&params, "data.img", "hash.img")
     if err != nil {
         log.Fatal(err)
     }
     fmt.Printf("Root hash: %x\n", rootHash)
     
     // Verify data
-    err = verity.VerityVerify(&params, "data.img", "hash.img", rootHash)
+    err = verity.Verify(&params, "data.img", "hash.img", rootHash)
     if err != nil {
         log.Fatal(err)
     }

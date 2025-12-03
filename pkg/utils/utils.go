@@ -18,9 +18,9 @@ package utils
 
 import (
 	"crypto"
-	_ "crypto/sha1"
-	_ "crypto/sha256"
-	_ "crypto/sha512"
+	_ "crypto/sha1"   // register SHA1 for crypto.Hash
+	_ "crypto/sha256" // register SHA256 for crypto.Hash
+	_ "crypto/sha512" // register SHA512 for crypto.Hash
 	"encoding/hex"
 	"fmt"
 	"os"

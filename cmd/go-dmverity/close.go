@@ -39,7 +39,7 @@ func parseCloseArgs(args []string) (string, error) {
 }
 
 func runClose(name string) error {
-	if err := verity.VerityClose(name); err != nil {
+	if err := verity.Close(name); err != nil {
 		return err
 	}
 

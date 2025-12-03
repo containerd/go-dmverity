@@ -53,7 +53,7 @@ func defaultFlags(fs *flag.FlagSet) *CommonFlags {
 	}
 }
 
-func validateAndApplyBlockSizes(p *verity.VerityParams, flags *CommonFlags) error {
+func validateAndApplyBlockSizes(p *verity.Params, flags *CommonFlags) error {
 	if *flags.NoSuper {
 		if p.DataBlockSize == 0 {
 			p.DataBlockSize = 4096
@@ -80,7 +80,7 @@ func validateAndApplyBlockSizes(p *verity.VerityParams, flags *CommonFlags) erro
 	return nil
 }
 
-func applyFlags(p *verity.VerityParams, flags *CommonFlags) {
+func applyFlags(p *verity.Params, flags *CommonFlags) {
 	p.HashType = uint32(*flags.FormatType)
 	p.NoSuperblock = *flags.NoSuper
 	p.HashAreaOffset = *flags.HashOffset

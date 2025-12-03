@@ -16,8 +16,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
-        with:
-          path: src/github.com/containerd/go-dmverity
+
       - name: Setup Go
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00  # v6.0.0
         with:
@@ -45,6 +44,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          fetch-depth: 25
+          path: src/github.com/containerd/go-dmverity
 
       - name: Setup Go
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00  # v6.0.0
@@ -54,7 +56,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8 # v6.1.1
         with:
-          version: v1.60.3
+          version: v1.64.8
           args: --timeout=5m
           skip-cache: true
           working-directory: src/github.com/containerd/go-dmverity
@@ -66,7 +68,7 @@ jobs:
 
     steps:
       - name: Checkout
-      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
           path: src/github.com/containerd/go-dmverity
           fetch-depth: 25
