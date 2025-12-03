@@ -85,15 +85,15 @@ func TestDump_NoSuperblock(t *testing.T) {
 	defer os.Remove(data)
 	defer os.Remove(hash)
 
-	params := verity.DefaultVerityParams()
+	params := verity.DefaultParams()
 	params.NoSuperblock = true
 	params.DataBlocks = 16
 	params.DataBlockSize = 4096
 	params.HashBlockSize = 4096
 
-	_, err := verity.VerityCreate(&params, data, hash)
+	_, err := verity.Create(&params, data, hash)
 	if err != nil {
-		t.Fatalf("VerityCreate failed: %v", err)
+		t.Fatalf("Create failed: %v", err)
 	}
 
 	err = runDump(hash)

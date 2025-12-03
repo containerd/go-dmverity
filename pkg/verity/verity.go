@@ -33,7 +33,7 @@ import (
 	"github.com/containerd/go-dmverity/pkg/utils"
 )
 
-func validateParams(params *VerityParams, digestSize int) error {
+func validateParams(params *Params, digestSize int) error {
 	if params == nil {
 		return errors.New("verity: nil params")
 	}
@@ -84,7 +84,7 @@ func validateParams(params *VerityParams, digestSize int) error {
 	return nil
 }
 
-func VerityVerify(params *VerityParams, dataDevice, hashDevice string, rootHash []byte) error {
+func Verify(params *Params, dataDevice, hashDevice string, rootHash []byte) error {
 	if params == nil {
 		return errors.New("verity: nil params")
 	}
@@ -111,7 +111,7 @@ func VerityVerify(params *VerityParams, dataDevice, hashDevice string, rootHash 
 		}
 	}
 
-	vh := NewVerityHash(
+	vh := NewCryptHash(
 		params.HashName,
 		params.DataBlockSize, params.HashBlockSize,
 		params.DataBlocks,
@@ -129,7 +129,7 @@ func VerityVerify(params *VerityParams, dataDevice, hashDevice string, rootHash 
 	return vh.CreateOrVerifyHashTree(true)
 }
 
-func VerityCreate(params *VerityParams, dataDevice, hashDevice string) ([]byte, error) {
+func Create(params *Params, dataDevice, hashDevice string) ([]byte, error) {
 	if params == nil {
 		return nil, errors.New("verity: nil params")
 	}
@@ -144,7 +144,7 @@ func VerityCreate(params *VerityParams, dataDevice, hashDevice string) ([]byte, 
 		openFlags := os.O_RDWR | os.O_CREATE
 		if dataDevice == hashDevice {
 			sbOffset = params.HashAreaOffset
-			params.HashAreaOffset = sbOffset + utils.AlignUp(uint64(VeritySuperblockSize), uint64(params.HashBlockSize))
+			params.HashAreaOffset = sbOffset + utils.AlignUp(uint64(SuperblockSize), uint64(params.HashBlockSize))
 		} else {
 			openFlags |= os.O_TRUNC
 			sbOffset = 0
@@ -161,7 +161,7 @@ func VerityCreate(params *VerityParams, dataDevice, hashDevice string) ([]byte, 
 		}
 	}
 
-	vh := NewVerityHash(
+	vh := NewCryptHash(
 		params.HashName,
 		params.DataBlockSize, params.HashBlockSize,
 		params.DataBlocks,
@@ -183,8 +183,8 @@ func VerityCreate(params *VerityParams, dataDevice, hashDevice string) ([]byte, 
 	return vh.RootHash(), nil
 }
 
-func VerifyBlock(params *VerityParams, hashName string, data, salt, expectedHash []byte) error {
-	vh := &VerityHash{
+func VerifyBlock(params *Params, hashName string, data, salt, expectedHash []byte) error {
+	vh := &CryptHash{
 		hashType: params.HashType,
 		hashFunc: func() crypto.Hash {
 			hashMap := map[string]crypto.Hash{
@@ -211,7 +211,7 @@ func VerifyBlock(params *VerityParams, hashName string, data, salt, expectedHash
 	return nil
 }
 
-func InitParams(params *VerityParams, dataLoop, hashLoop string) error {
+func InitParams(params *Params, dataLoop, hashLoop string) error {
 	if params == nil {
 		return errors.New("verity: nil params")
 	}
@@ -263,7 +263,7 @@ func DumpDevice(hashPath string) (string, error) {
 	}
 	defer hashFile.Close()
 
-	params := &VerityParams{}
+	params := &Params{}
 	superblock, err := ReadSuperblock(hashFile, 0)
 	if err != nil {
 		return "", fmt.Errorf("failed to read superblock: %w", err)
@@ -310,7 +310,7 @@ func DumpDevice(hashPath string) (string, error) {
 	return sb.String(), nil
 }
 
-func GetHashTreeSize(params *VerityParams) (uint64, error) {
+func GetHashTreeSize(params *Params) (uint64, error) {
 	if params == nil {
 		return 0, errors.New("verity: nil params")
 	}
@@ -319,7 +319,7 @@ func GetHashTreeSize(params *VerityParams) (uint64, error) {
 		return 0, errors.New("data blocks must be greater than 0")
 	}
 
-	vh := NewVerityHash(
+	vh := NewCryptHash(
 		params.HashName,
 		params.DataBlockSize, params.HashBlockSize,
 		params.DataBlocks,
@@ -333,7 +333,7 @@ func GetHashTreeSize(params *VerityParams) (uint64, error) {
 	return vh.GetHashTreeSize()
 }
 
-func VerityOpen(params *VerityParams, name, dataDevice, hashDevice string, rootHash []byte, signatureFile string, flags []string) (string, error) {
+func Open(params *Params, name, dataDevice, hashDevice string, rootHash []byte, signatureFile string, flags []string) (string, error) {
 	var keyDesc string
 	var keyID keyring.KeySerial
 
@@ -407,7 +407,7 @@ func VerityOpen(params *VerityParams, name, dataDevice, hashDevice string, rootH
 		return "", err
 	}
 
-	lengthSectors := uint64(params.DataBlocks) * uint64(params.DataBlockSize/512)
+	lengthSectors := params.DataBlocks * uint64(params.DataBlockSize/512)
 
 	c, err := dm.Open()
 	if err != nil {
@@ -459,7 +459,7 @@ func VerityOpen(params *VerityParams, name, dataDevice, hashDevice string, rootH
 	return devPath, nil
 }
 
-func VerityClose(name string) error {
+func Close(name string) error {
 	c, err := dm.Open()
 	if err != nil {
 		return fmt.Errorf("open dm control: %w", err)
@@ -478,7 +478,7 @@ func VerityClose(name string) error {
 	return nil
 }
 
-func VerityCheck(deviceName string, expectedRootHash []byte) bool {
+func Check(deviceName string, expectedRootHash []byte) bool {
 	c, err := dm.Open()
 	if err != nil {
 		return false

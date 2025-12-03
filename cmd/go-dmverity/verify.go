@@ -28,7 +28,7 @@ import (
 	verity "github.com/containerd/go-dmverity/pkg/verity"
 )
 
-func parseVerifyArgs(args []string) (*verity.VerityParams, string, string, []byte, error) {
+func parseVerifyArgs(args []string) (*verity.Params, string, string, []byte, error) {
 	fs := flag.NewFlagSet("verify", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 
@@ -45,7 +45,7 @@ func parseVerifyArgs(args []string) (*verity.VerityParams, string, string, []byt
 	dataPath := rest[0]
 	hashPath := rest[1]
 
-	p := verity.DefaultVerityParams()
+	p := verity.DefaultParams()
 
 	applyFlags(&p, flags)
 
@@ -96,14 +96,14 @@ func parseVerifyArgs(args []string) (*verity.VerityParams, string, string, []byt
 	return &p, dataPath, hashPath, rootBytes, nil
 }
 
-func runVerify(p *verity.VerityParams, dataPath, hashPath string, rootDigest []byte) error {
+func runVerify(p *verity.Params, dataPath, hashPath string, rootDigest []byte) error {
 	if p.HashName != "" {
 		if err := utils.ValidateRootHashSize(rootDigest, p.HashName); err != nil {
 			return err
 		}
 	}
 
-	if err := verity.VerityVerify(p, dataPath, hashPath, rootDigest); err != nil {
+	if err := verity.Verify(p, dataPath, hashPath, rootDigest); err != nil {
 		return fmt.Errorf("verification failed: %w", err)
 	}
 

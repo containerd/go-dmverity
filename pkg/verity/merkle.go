@@ -18,16 +18,16 @@ package verity
 
 import (
 	"crypto"
-	_ "crypto/sha1"
-	_ "crypto/sha256"
-	_ "crypto/sha512"
+	_ "crypto/sha1"   // register SHA1 for crypto.Hash
+	_ "crypto/sha256" // register SHA256 for crypto.Hash
+	_ "crypto/sha512" // register SHA512 for crypto.Hash
 	"fmt"
 	"io"
 	"math"
 	"os"
 )
 
-type VerityHash struct {
+type CryptHash struct {
 	hashName       string
 	dataBlockSize  uint32
 	hashBlockSize  uint32
@@ -46,7 +46,7 @@ type hashTreeLevel struct {
 	numBlocks uint64
 }
 
-func NewVerityHash(
+func NewCryptHash(
 	hashName string,
 	dataBlockSize, hashBlockSize uint32,
 	dataBlocks uint64,
@@ -55,7 +55,7 @@ func NewVerityHash(
 	hashAreaOffset uint64,
 	dataDevice, hashDevice string,
 	rootHash []byte,
-) *VerityHash {
+) *CryptHash {
 	hashMap := map[string]crypto.Hash{
 		"sha256": crypto.SHA256,
 		"sha512": crypto.SHA512,
@@ -67,7 +67,7 @@ func NewVerityHash(
 		hashFunc = h
 	}
 
-	vh := &VerityHash{
+	vh := &CryptHash{
 		hashName:       hashName,
 		dataBlockSize:  dataBlockSize,
 		hashBlockSize:  hashBlockSize,
@@ -86,7 +86,7 @@ func NewVerityHash(
 	return vh
 }
 
-func (vh *VerityHash) RootHash() []byte {
+func (vh *CryptHash) RootHash() []byte {
 	out := make([]byte, len(vh.rootHash))
 	copy(out, vh.rootHash)
 	return out
@@ -100,7 +100,7 @@ func getBitsDown(u uint32) uint {
 	return i
 }
 
-func (vh *VerityHash) hashLevels(dataFileBlocks uint64) ([]hashTreeLevel, error) {
+func (vh *CryptHash) hashLevels(dataFileBlocks uint64) ([]hashTreeLevel, error) {
 	digestSize := uint32(vh.hashFunc.Size())
 	if digestSize == 0 {
 		return nil, fmt.Errorf("invalid digest size")
@@ -143,7 +143,7 @@ func (vh *VerityHash) hashLevels(dataFileBlocks uint64) ([]hashTreeLevel, error)
 	return levels, nil
 }
 
-func (vh *VerityHash) GetHashTreeSize() (uint64, error) {
+func (vh *CryptHash) GetHashTreeSize() (uint64, error) {
 	levels, err := vh.hashLevels(vh.dataBlocks)
 	if err != nil {
 		return 0, err
@@ -157,7 +157,7 @@ func (vh *VerityHash) GetHashTreeSize() (uint64, error) {
 	return totalHashBlocks * uint64(vh.hashBlockSize), nil
 }
 
-func (vh *VerityHash) verifyHashBlock(data, salt []byte) ([]byte, error) {
+func (vh *CryptHash) verifyHashBlock(data, salt []byte) ([]byte, error) {
 	h := vh.hashFunc.New()
 
 	if vh.hashType == 1 {
@@ -184,7 +184,7 @@ func verifyZero(block []byte, offset uint64) error {
 	return nil
 }
 
-func (vh *VerityHash) getDigestSizeFull(hashSize uint32) uint32 {
+func (vh *CryptHash) getDigestSizeFull(hashSize uint32) uint32 {
 	if vh.hashType == 0 {
 		return hashSize
 	}
@@ -200,7 +200,7 @@ func (vh *VerityHash) getDigestSizeFull(hashSize uint32) uint32 {
 	return n + 1
 }
 
-func (vh *VerityHash) createOrVerify(
+func (vh *CryptHash) createOrVerify(
 	rd, wr *os.File,
 	dataBlock uint64, dataBlockSize uint32,
 	hashBlock uint64, hashBlockSize uint32,
@@ -319,7 +319,7 @@ func (vh *VerityHash) createOrVerify(
 	return nil
 }
 
-func (vh *VerityHash) CreateOrVerifyHashTree(verify bool) error {
+func (vh *CryptHash) CreateOrVerifyHashTree(verify bool) error {
 	digestSize := uint32(vh.hashFunc.Size())
 	if digestSize > VerityMaxDigestSize {
 		return fmt.Errorf("digest size exceeds maximum")

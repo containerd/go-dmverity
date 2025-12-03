@@ -17,16 +17,16 @@
 package verity
 
 const (
-	VeritySignature      = "verity\x00\x00"
-	VeritySuperblockSize = 512
-	VerityMaxHashType    = 1
-	VerityMaxLevels      = 63
-	VerityMaxDigestSize  = 1024
-	MaxSaltSize          = 256
-	diskSectorSize       = 512
+	VeritySignature     = "verity\x00\x00"
+	SuperblockSize      = 512
+	VerityMaxHashType   = 1
+	VerityMaxLevels     = 63
+	VerityMaxDigestSize = 1024
+	MaxSaltSize         = 256
+	diskSectorSize      = 512
 )
 
-type VerityParams struct {
+type Params struct {
 	HashName       string
 	DataBlockSize  uint32
 	HashBlockSize  uint32
@@ -39,8 +39,8 @@ type VerityParams struct {
 	UUID           [16]byte
 }
 
-func DefaultVerityParams() VerityParams {
-	return VerityParams{
+func DefaultParams() Params {
+	return Params{
 		HashName: "sha256",
 		HashType: 1,
 	}

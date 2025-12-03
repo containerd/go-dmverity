@@ -37,12 +37,12 @@ var (
 )
 
 func init() {
-	if binary.Size(VeritySuperblock{}) != VeritySuperblockSize {
-		panic(fmt.Sprintf("verity: unexpected superblock size: %d", binary.Size(VeritySuperblock{})))
+	if binary.Size(Superblock{}) != SuperblockSize {
+		panic(fmt.Sprintf("verity: unexpected superblock size: %d", binary.Size(Superblock{})))
 	}
 }
 
-type VeritySuperblock struct {
+type Superblock struct {
 	Signature     [8]byte
 	Version       uint32
 	HashType      uint32
@@ -57,8 +57,8 @@ type VeritySuperblock struct {
 	Pad2          [168]byte
 }
 
-func DefaultVeritySuperblock() VeritySuperblock {
-	return VeritySuperblock{
+func DefaultSuperblock() Superblock {
+	return Superblock{
 		Signature:     [8]byte{0x76, 0x65, 0x72, 0x69, 0x74, 0x79, 0x00, 0x00},
 		Version:       1,
 		HashType:      1,
@@ -68,29 +68,29 @@ func DefaultVeritySuperblock() VeritySuperblock {
 	}
 }
 
-func NewSuperblock() *VeritySuperblock {
-	sb := DefaultVeritySuperblock()
+func NewSuperblock() *Superblock {
+	sb := DefaultSuperblock()
 	return &sb
 }
 
-func (sb *VeritySuperblock) Serialize() ([]byte, error) {
-	buf := bytes.NewBuffer(make([]byte, 0, VeritySuperblockSize))
+func (sb *Superblock) Serialize() ([]byte, error) {
+	buf := bytes.NewBuffer(make([]byte, 0, SuperblockSize))
 	if err := binary.Write(buf, binary.LittleEndian, sb); err != nil {
 		return nil, fmt.Errorf("verity: failed to serialize superblock: %w", err)
 	}
-	if buf.Len() != VeritySuperblockSize {
+	if buf.Len() != SuperblockSize {
 		return nil, fmt.Errorf("verity: serialized superblock has unexpected length %d", buf.Len())
 	}
 	return buf.Bytes(), nil
 }
 
-func DeserializeSuperblock(data []byte) (*VeritySuperblock, error) {
-	if len(data) < VeritySuperblockSize {
+func DeserializeSuperblock(data []byte) (*Superblock, error) {
+	if len(data) < SuperblockSize {
 		return nil, fmt.Errorf("verity: data too short for superblock (%d bytes)", len(data))
 	}
 
-	sb := &VeritySuperblock{}
-	buf := bytes.NewReader(data[:VeritySuperblockSize])
+	sb := &Superblock{}
+	buf := bytes.NewReader(data[:SuperblockSize])
 	if err := binary.Read(buf, binary.LittleEndian, sb); err != nil {
 		return nil, fmt.Errorf("verity: failed to deserialize superblock: %w", err)
 	}
@@ -101,7 +101,7 @@ func DeserializeSuperblock(data []byte) (*VeritySuperblock, error) {
 	return sb, nil
 }
 
-func ReadSuperblock(r io.ReaderAt, sbOffset uint64) (*VeritySuperblock, error) {
+func ReadSuperblock(r io.ReaderAt, sbOffset uint64) (*Superblock, error) {
 	if sbOffset%diskSectorSize != 0 {
 		return nil, fmt.Errorf("verity: superblock offset %d is not %d-byte aligned", sbOffset, diskSectorSize)
 	}
@@ -109,12 +109,12 @@ func ReadSuperblock(r io.ReaderAt, sbOffset uint64) (*VeritySuperblock, error) {
 		return nil, fmt.Errorf("verity: superblock offset overflows int64: %d", sbOffset)
 	}
 
-	buf := make([]byte, VeritySuperblockSize)
+	buf := make([]byte, SuperblockSize)
 	n, err := r.ReadAt(buf, int64(sbOffset))
 	if err != nil && !errors.Is(err, io.EOF) {
 		return nil, fmt.Errorf("verity: read superblock failed: %w", err)
 	}
-	if n != VeritySuperblockSize {
+	if n != SuperblockSize {
 		return nil, fmt.Errorf("verity: short read for superblock: got %d bytes", n)
 	}
 
@@ -132,7 +132,7 @@ func ReadSuperblock(r io.ReaderAt, sbOffset uint64) (*VeritySuperblock, error) {
 	return sb, nil
 }
 
-func (sb *VeritySuperblock) WriteSuperblock(w io.WriterAt, sbOffset uint64) error {
+func (sb *Superblock) WriteSuperblock(w io.WriterAt, sbOffset uint64) error {
 	if sbOffset%diskSectorSize != 0 {
 		return fmt.Errorf("verity: superblock offset %d is not %d-byte aligned", sbOffset, diskSectorSize)
 	}
@@ -155,7 +155,7 @@ func (sb *VeritySuperblock) WriteSuperblock(w io.WriterAt, sbOffset uint64) erro
 	return nil
 }
 
-func (sb *VeritySuperblock) validateBasic() error {
+func (sb *Superblock) validateBasic() error {
 	if string(sb.Signature[:]) != VeritySignature {
 		return errInvalidSignature
 	}
@@ -165,11 +165,11 @@ func (sb *VeritySuperblock) validateBasic() error {
 	return nil
 }
 
-func (sb *VeritySuperblock) algorithmString() string {
+func (sb *Superblock) algorithmString() string {
 	return strings.ToLower(strings.TrimRight(string(sb.Algorithm[:]), "\x00"))
 }
 
-func (sb *VeritySuperblock) UUIDString() (string, error) {
+func (sb *Superblock) UUIDString() (string, error) {
 	uuidVal, err := uuid.FromBytes(sb.UUID[:])
 	if err != nil {
 		return "", fmt.Errorf("verity: invalid superblock UUID: %w", err)
@@ -180,7 +180,7 @@ func (sb *VeritySuperblock) UUIDString() (string, error) {
 	return uuidVal.String(), nil
 }
 
-func (sb *VeritySuperblock) SetUUIDFromString(s string) error {
+func (sb *Superblock) SetUUIDFromString(s string) error {
 	uuidVal, err := uuid.Parse(strings.TrimSpace(s))
 	if err != nil {
 		return fmt.Errorf("verity: invalid UUID %q: %w", s, err)
@@ -189,7 +189,7 @@ func (sb *VeritySuperblock) SetUUIDFromString(s string) error {
 	return nil
 }
 
-func buildSuperblockFromParams(p *VerityParams) (*VeritySuperblock, error) {
+func buildSuperblockFromParams(p *Params) (*Superblock, error) {
 	if p == nil {
 		return nil, errors.New("verity: nil params provided")
 	}
@@ -214,7 +214,7 @@ func buildSuperblockFromParams(p *VerityParams) (*VeritySuperblock, error) {
 		return nil, fmt.Errorf("verity: hash algorithm %s not supported", algo)
 	}
 
-	sb := DefaultVeritySuperblock()
+	sb := DefaultSuperblock()
 	copy(sb.Signature[:], VeritySignature)
 	sb.Version = 1
 	sb.HashType = p.HashType
@@ -239,7 +239,7 @@ func buildSuperblockFromParams(p *VerityParams) (*VeritySuperblock, error) {
 	return &sb, nil
 }
 
-func adoptParamsFromSuperblock(p *VerityParams, sb *VeritySuperblock, sbOffset uint64) error {
+func adoptParamsFromSuperblock(p *Params, sb *Superblock, sbOffset uint64) error {
 	if p == nil || sb == nil {
 		return errors.New("verity: nil params or superblock")
 	}
@@ -309,7 +309,7 @@ func adoptParamsFromSuperblock(p *VerityParams, sb *VeritySuperblock, sbOffset u
 	if sbOffset == 0 {
 		p.HashAreaOffset = uint64(p.HashBlockSize)
 	} else {
-		p.HashAreaOffset = sbOffset + utils.AlignUp(uint64(VeritySuperblockSize), uint64(p.HashBlockSize))
+		p.HashAreaOffset = sbOffset + utils.AlignUp(uint64(SuperblockSize), uint64(p.HashBlockSize))
 	}
 	return nil
 }

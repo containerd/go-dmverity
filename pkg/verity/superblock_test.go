@@ -63,9 +63,9 @@ func (m *mockWriterAt) WriteAt(p []byte, off int64) (n int, err error) {
 	return n, nil
 }
 
-func createValidSuperblock(t *testing.T) *VeritySuperblock {
+func createValidSuperblock(t *testing.T) *Superblock {
 	t.Helper()
-	sb := DefaultVeritySuperblock()
+	sb := DefaultSuperblock()
 
 	testUUID := uuid.New()
 	copy(sb.UUID[:], testUUID[:])
@@ -98,8 +98,8 @@ func TestReadSuperblock(t *testing.T) {
 				if err != nil {
 					t.Fatalf("failed to serialize superblock: %v", err)
 				}
-				if len(data) < VeritySuperblockSize {
-					data = append(data, make([]byte, VeritySuperblockSize-len(data))...)
+				if len(data) < SuperblockSize {
+					data = append(data, make([]byte, SuperblockSize-len(data))...)
 				}
 				return &mockReaderAt{data: data}, 0
 			},
@@ -113,7 +113,7 @@ func TestReadSuperblock(t *testing.T) {
 				if err != nil {
 					t.Fatalf("failed to serialize superblock: %v", err)
 				}
-				paddedData := make([]byte, 512+VeritySuperblockSize)
+				paddedData := make([]byte, 512+SuperblockSize)
 				copy(paddedData[512:], data)
 				return &mockReaderAt{data: paddedData}, 512
 			},
@@ -130,7 +130,7 @@ func TestReadSuperblock(t *testing.T) {
 		{
 			name: "superblock with empty UUID",
 			setupData: func() (io.ReaderAt, uint64) {
-				sb := DefaultVeritySuperblock()
+				sb := DefaultSuperblock()
 				sb.DataBlocks = 1024
 				data, err := sb.Serialize()
 				if err != nil {
@@ -174,13 +174,13 @@ func TestReadSuperblock(t *testing.T) {
 func TestWriteSuperblock(t *testing.T) {
 	tests := []struct {
 		name      string
-		setupTest func() (*VeritySuperblock, io.WriterAt, uint64)
+		setupTest func() (*Superblock, io.WriterAt, uint64)
 		wantErr   bool
 		errMsg    string
 	}{
 		{
 			name: "write at offset 0",
-			setupTest: func() (*VeritySuperblock, io.WriterAt, uint64) {
+			setupTest: func() (*Superblock, io.WriterAt, uint64) {
 				sb := createValidSuperblock(t)
 				writer := &mockWriterAt{data: make([]byte, 1024)}
 				return sb, writer, 0
@@ -189,7 +189,7 @@ func TestWriteSuperblock(t *testing.T) {
 		},
 		{
 			name: "write at offset 512",
-			setupTest: func() (*VeritySuperblock, io.WriterAt, uint64) {
+			setupTest: func() (*Superblock, io.WriterAt, uint64) {
 				sb := createValidSuperblock(t)
 				writer := &mockWriterAt{data: make([]byte, 2048)}
 				return sb, writer, 512
@@ -198,7 +198,7 @@ func TestWriteSuperblock(t *testing.T) {
 		},
 		{
 			name: "unaligned offset",
-			setupTest: func() (*VeritySuperblock, io.WriterAt, uint64) {
+			setupTest: func() (*Superblock, io.WriterAt, uint64) {
 				sb := createValidSuperblock(t)
 				writer := &mockWriterAt{data: make([]byte, 1024)}
 				return sb, writer, 100
@@ -251,7 +251,7 @@ func TestWriteReadRoundTrip(t *testing.T) {
 	verifySuperblockFields(t, original, readBack)
 }
 
-func verifySuperblockFields(t *testing.T, expected, actual *VeritySuperblock) {
+func verifySuperblockFields(t *testing.T, expected, actual *Superblock) {
 	t.Helper()
 	if !bytes.Equal(expected.Signature[:], actual.Signature[:]) {
 		t.Error("Signature mismatch")
@@ -285,8 +285,8 @@ func verifySuperblockFields(t *testing.T, expected, actual *VeritySuperblock) {
 	}
 }
 
-func validParams(hashName string, saltSize uint16) *VerityParams {
-	return &VerityParams{
+func validParams(hashName string, saltSize uint16) *Params {
+	return &Params{
 		HashName:      hashName,
 		DataBlockSize: 4096,
 		HashBlockSize: 4096,
@@ -301,17 +301,17 @@ func validParams(hashName string, saltSize uint16) *VerityParams {
 func TestBuildSuperblockFromParams(t *testing.T) {
 	tests := []struct {
 		name    string
-		params  *VerityParams
+		params  *Params
 		wantErr bool
 		errMsg  string
-		verify  func(*testing.T, *VeritySuperblock)
+		verify  func(*testing.T, *Superblock)
 	}{
 		{"nil params", nil, true, "nil params", nil},
 		{
 			name:    "valid params with sha256",
 			params:  validParams("sha256", 32),
 			wantErr: false,
-			verify: func(t *testing.T, sb *VeritySuperblock) {
+			verify: func(t *testing.T, sb *Superblock) {
 				if sb.Version != 1 || sb.DataBlockSize != 4096 || sb.HashBlockSize != 4096 ||
 					sb.DataBlocks != 1000 || sb.SaltSize != 32 {
 					t.Error("Superblock fields mismatch")
@@ -325,7 +325,7 @@ func TestBuildSuperblockFromParams(t *testing.T) {
 			name:    "valid params with sha512",
 			params:  validParams("sha512", 64),
 			wantErr: false,
-			verify: func(t *testing.T, sb *VeritySuperblock) {
+			verify: func(t *testing.T, sb *Superblock) {
 				if sb.algorithmString() != "sha512" {
 					t.Errorf("Algorithm = %q, want sha512", sb.algorithmString())
 				}
@@ -333,13 +333,13 @@ func TestBuildSuperblockFromParams(t *testing.T) {
 		},
 		{
 			name: "valid params with empty UUID",
-			params: &VerityParams{
+			params: &Params{
 				HashName: "sha256", DataBlockSize: 4096, HashBlockSize: 4096,
 				DataBlocks: 1000, HashType: 1, Salt: make([]byte, 32), SaltSize: 32,
 				UUID: [16]byte{},
 			},
 			wantErr: false,
-			verify: func(t *testing.T, sb *VeritySuperblock) {
+			verify: func(t *testing.T, sb *Superblock) {
 				if sb.UUID != ([16]byte{}) {
 					t.Error("UUID should be empty")
 				}
@@ -347,7 +347,7 @@ func TestBuildSuperblockFromParams(t *testing.T) {
 		},
 		{
 			name: "invalid data block size",
-			params: &VerityParams{
+			params: &Params{
 				HashName: "sha256", DataBlockSize: 1000, HashBlockSize: 4096,
 				DataBlocks: 100, HashType: 1, Salt: make([]byte, 32), SaltSize: 32, UUID: uuid.New(),
 			},
@@ -356,7 +356,7 @@ func TestBuildSuperblockFromParams(t *testing.T) {
 		},
 		{
 			name: "invalid hash block size",
-			params: &VerityParams{
+			params: &Params{
 				HashName: "sha256", DataBlockSize: 4096, HashBlockSize: 3000,
 				DataBlocks: 100, HashType: 1, Salt: make([]byte, 32), SaltSize: 32, UUID: uuid.New(),
 			},
@@ -365,7 +365,7 @@ func TestBuildSuperblockFromParams(t *testing.T) {
 		},
 		{
 			name: "unsupported hash type",
-			params: &VerityParams{
+			params: &Params{
 				HashName: "sha256", DataBlockSize: 4096, HashBlockSize: 4096,
 				DataBlocks: 100, HashType: 99, Salt: make([]byte, 32), SaltSize: 32, UUID: uuid.New(),
 			},
@@ -374,7 +374,7 @@ func TestBuildSuperblockFromParams(t *testing.T) {
 		},
 		{
 			name: "salt size mismatch",
-			params: &VerityParams{
+			params: &Params{
 				HashName: "sha256", DataBlockSize: 4096, HashBlockSize: 4096,
 				DataBlocks: 100, HashType: 1, Salt: make([]byte, 32), SaltSize: 64, UUID: uuid.New(),
 			},
@@ -383,7 +383,7 @@ func TestBuildSuperblockFromParams(t *testing.T) {
 		},
 		{
 			name: "salt too large",
-			params: &VerityParams{
+			params: &Params{
 				HashName: "sha256", DataBlockSize: 4096, HashBlockSize: 4096,
 				DataBlocks: 100, HashType: 1, Salt: make([]byte, 300), SaltSize: 300, UUID: uuid.New(),
 			},
@@ -392,7 +392,7 @@ func TestBuildSuperblockFromParams(t *testing.T) {
 		},
 		{
 			name: "empty hash algorithm",
-			params: &VerityParams{
+			params: &Params{
 				HashName: "", DataBlockSize: 4096, HashBlockSize: 4096,
 				DataBlocks: 100, HashType: 1, Salt: make([]byte, 32), SaltSize: 32, UUID: uuid.New(),
 			},
@@ -401,7 +401,7 @@ func TestBuildSuperblockFromParams(t *testing.T) {
 		},
 		{
 			name: "unsupported hash algorithm",
-			params: &VerityParams{
+			params: &Params{
 				HashName: "md5", DataBlockSize: 4096, HashBlockSize: 4096,
 				DataBlocks: 100, HashType: 1, Salt: make([]byte, 32), SaltSize: 32, UUID: uuid.New(),
 			},
@@ -447,24 +447,24 @@ func TestBuildSuperblockFromParams(t *testing.T) {
 }
 
 func TestAdoptParamsFromSuperblock(t *testing.T) {
-	createMismatchTest := func(name, errMsg string, modifyParams func(*VerityParams)) struct {
+	createMismatchTest := func(name, errMsg string, modifyParams func(*Params)) struct {
 		name      string
-		setupTest func() (*VerityParams, *VeritySuperblock, uint64)
+		setupTest func() (*Params, *Superblock, uint64)
 		wantErr   bool
 		errMsg    string
-		verify    func(*testing.T, *VerityParams)
+		verify    func(*testing.T, *Params)
 	} {
 		return struct {
 			name      string
-			setupTest func() (*VerityParams, *VeritySuperblock, uint64)
+			setupTest func() (*Params, *Superblock, uint64)
 			wantErr   bool
 			errMsg    string
-			verify    func(*testing.T, *VerityParams)
+			verify    func(*testing.T, *Params)
 		}{
 			name: name,
-			setupTest: func() (*VerityParams, *VeritySuperblock, uint64) {
+			setupTest: func() (*Params, *Superblock, uint64) {
 				sb := createValidSuperblock(t)
-				params := &VerityParams{}
+				params := &Params{}
 				modifyParams(params)
 				return params, sb, 0
 			},
@@ -473,25 +473,25 @@ func TestAdoptParamsFromSuperblock(t *testing.T) {
 		}
 	}
 
-	createInvalidSBTest := func(name, errMsg string, modifySB func(*VeritySuperblock)) struct {
+	createInvalidSBTest := func(name, errMsg string, modifySB func(*Superblock)) struct {
 		name      string
-		setupTest func() (*VerityParams, *VeritySuperblock, uint64)
+		setupTest func() (*Params, *Superblock, uint64)
 		wantErr   bool
 		errMsg    string
-		verify    func(*testing.T, *VerityParams)
+		verify    func(*testing.T, *Params)
 	} {
 		return struct {
 			name      string
-			setupTest func() (*VerityParams, *VeritySuperblock, uint64)
+			setupTest func() (*Params, *Superblock, uint64)
 			wantErr   bool
 			errMsg    string
-			verify    func(*testing.T, *VerityParams)
+			verify    func(*testing.T, *Params)
 		}{
 			name: name,
-			setupTest: func() (*VerityParams, *VeritySuperblock, uint64) {
+			setupTest: func() (*Params, *Superblock, uint64) {
 				sb := createValidSuperblock(t)
 				modifySB(sb)
-				return &VerityParams{}, sb, 0
+				return &Params{}, sb, 0
 			},
 			wantErr: true,
 			errMsg:  errMsg,
@@ -500,14 +500,14 @@ func TestAdoptParamsFromSuperblock(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		setupTest func() (*VerityParams, *VeritySuperblock, uint64)
+		setupTest func() (*Params, *Superblock, uint64)
 		wantErr   bool
 		errMsg    string
-		verify    func(*testing.T, *VerityParams)
+		verify    func(*testing.T, *Params)
 	}{
 		{
 			name: "nil params",
-			setupTest: func() (*VerityParams, *VeritySuperblock, uint64) {
+			setupTest: func() (*Params, *Superblock, uint64) {
 				return nil, createValidSuperblock(t), 0
 			},
 			wantErr: true,
@@ -515,17 +515,17 @@ func TestAdoptParamsFromSuperblock(t *testing.T) {
 		},
 		{
 			name: "nil superblock",
-			setupTest: func() (*VerityParams, *VeritySuperblock, uint64) {
-				return &VerityParams{}, nil, 0
+			setupTest: func() (*Params, *Superblock, uint64) {
+				return &Params{}, nil, 0
 			},
 			wantErr: true,
 			errMsg:  "nil params or superblock",
 		},
 		{
 			name: "matching params and superblock",
-			setupTest: func() (*VerityParams, *VeritySuperblock, uint64) {
+			setupTest: func() (*Params, *Superblock, uint64) {
 				sb := createValidSuperblock(t)
-				params := &VerityParams{
+				params := &Params{
 					HashName: "sha256", DataBlockSize: 4096, HashBlockSize: 4096,
 					DataBlocks: 1024, HashType: 1, Salt: make([]byte, 32), SaltSize: 32, UUID: sb.UUID,
 				}
@@ -536,57 +536,57 @@ func TestAdoptParamsFromSuperblock(t *testing.T) {
 		},
 		{
 			name: "adopt from superblock with empty UUID",
-			setupTest: func() (*VerityParams, *VeritySuperblock, uint64) {
-				sb := DefaultVeritySuperblock()
+			setupTest: func() (*Params, *Superblock, uint64) {
+				sb := DefaultSuperblock()
 				sb.DataBlocks = 1024
 				sb.SaltSize = 32
 				for i := 0; i < 32; i++ {
 					sb.Salt[i] = byte(i)
 				}
-				return &VerityParams{}, &sb, 512
+				return &Params{}, &sb, 512
 			},
 			wantErr: false,
-			verify: func(t *testing.T, p *VerityParams) {
+			verify: func(t *testing.T, p *Params) {
 				if p.UUID != ([16]byte{}) {
 					t.Error("UUID should be empty")
 				}
 			},
 		},
-		createMismatchTest("algorithm mismatch", "algorithm mismatch", func(p *VerityParams) {
+		createMismatchTest("algorithm mismatch", "algorithm mismatch", func(p *Params) {
 			p.HashName = "sha512"
 		}),
-		createMismatchTest("data block size mismatch", "data block size mismatch", func(p *VerityParams) {
+		createMismatchTest("data block size mismatch", "data block size mismatch", func(p *Params) {
 			p.DataBlockSize = 8192
 		}),
-		createMismatchTest("hash block size mismatch", "hash block size mismatch", func(p *VerityParams) {
+		createMismatchTest("hash block size mismatch", "hash block size mismatch", func(p *Params) {
 			p.HashBlockSize = 8192
 		}),
-		createMismatchTest("data blocks mismatch", "data blocks mismatch", func(p *VerityParams) {
+		createMismatchTest("data blocks mismatch", "data blocks mismatch", func(p *Params) {
 			p.DataBlocks = 2048
 		}),
-		createMismatchTest("salt mismatch", "salt mismatch", func(p *VerityParams) {
+		createMismatchTest("salt mismatch", "salt mismatch", func(p *Params) {
 			p.Salt = make([]byte, 32)
 			p.SaltSize = 32
 			for i := range p.Salt {
 				p.Salt[i] = 0xFF
 			}
 		}),
-		createMismatchTest("UUID mismatch", "UUID mismatch", func(p *VerityParams) {
+		createMismatchTest("UUID mismatch", "UUID mismatch", func(p *Params) {
 			p.UUID = uuid.New()
 		}),
-		createInvalidSBTest("invalid superblock signature", "invalid superblock signature", func(sb *VeritySuperblock) {
+		createInvalidSBTest("invalid superblock signature", "invalid superblock signature", func(sb *Superblock) {
 			sb.Signature = [8]byte{}
 		}),
-		createInvalidSBTest("invalid superblock version", "unsupported superblock version", func(sb *VeritySuperblock) {
+		createInvalidSBTest("invalid superblock version", "unsupported superblock version", func(sb *Superblock) {
 			sb.Version = 99
 		}),
-		createInvalidSBTest("unsupported hash type in superblock", "unsupported hash type", func(sb *VeritySuperblock) {
+		createInvalidSBTest("unsupported hash type in superblock", "unsupported hash type", func(sb *Superblock) {
 			sb.HashType = 99
 		}),
-		createInvalidSBTest("invalid block size in superblock", "invalid block size", func(sb *VeritySuperblock) {
+		createInvalidSBTest("invalid block size in superblock", "invalid block size", func(sb *Superblock) {
 			sb.DataBlockSize = 1000
 		}),
-		createInvalidSBTest("salt too large in superblock", "salt too large", func(sb *VeritySuperblock) {
+		createInvalidSBTest("salt too large in superblock", "salt too large", func(sb *Superblock) {
 			sb.SaltSize = 300
 		}),
 	}

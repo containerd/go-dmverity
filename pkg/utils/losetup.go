@@ -13,7 +13,6 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-// Adapted from github.com/containerd/containerd/v2/core/mount/losetup_linux.go
 
 package utils
 
@@ -27,6 +26,8 @@ import (
 
 	"golang.org/x/sys/unix"
 )
+
+// Adapted from github.com/containerd/containerd/v2/core/mount/losetup_linux.go
 
 const (
 	loopControlPath = "/dev/loop-control"
