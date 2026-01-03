@@ -13,7 +13,7 @@
 
 ## Quick Start
 
-See the [Guide](docs/guide.md) for complete installation and usage instructions.
+See the [Guide](docs/getting-started.md) for complete installation and usage instructions.
 
 ## Project Details
 
