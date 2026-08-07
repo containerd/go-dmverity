@@ -54,9 +54,9 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8 # v6.1.1
+        uses: golangci/golangci-lint-action@db582008a42febd596419635a5abc9d9815daa9c # v9.2.1
         with:
-          version: v1.64.8
+          version: v2.9.0
           args: --timeout=5m
           skip-cache: true
           working-directory: src/github.com/containerd/go-dmverity
